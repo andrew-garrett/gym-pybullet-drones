@@ -111,8 +111,8 @@ class BaseAviary(gym.Env):
         self.DW_COEFF_1, \
         self.DW_COEFF_2, \
         self.DW_COEFF_3 = self._parseURDFParameters()
-        print("[INFO] BaseAviary.__init__() loaded parameters from the drone's .urdf:\n[INFO] m {:f}, L {:f},\n[INFO] ixx {:f}, iyy {:f}, izz {:f},\n[INFO] kf {:f}, km {:f},\n[INFO] t2w {:f}, max_speed_kmh {:f},\n[INFO] gnd_eff_coeff {:f}, prop_radius {:f},\n[INFO] drag_xy_coeff {:f}, drag_z_coeff {:f},\n[INFO] dw_coeff_1 {:f}, dw_coeff_2 {:f}, dw_coeff_3 {:f}".format(
-            self.M, self.L, self.J[0,0], self.J[1,1], self.J[2,2], self.KF, self.KM, self.THRUST2WEIGHT_RATIO, self.MAX_SPEED_KMH, self.GND_EFF_COEFF, self.PROP_RADIUS, self.DRAG_COEFF[0], self.DRAG_COEFF[2], self.DW_COEFF_1, self.DW_COEFF_2, self.DW_COEFF_3))
+        # print("[INFO] BaseAviary.__init__() loaded parameters from the drone's .urdf:\n[INFO] m {:f}, L {:f},\n[INFO] ixx {:f}, iyy {:f}, izz {:f},\n[INFO] kf {:f}, km {:f},\n[INFO] t2w {:f}, max_speed_kmh {:f},\n[INFO] gnd_eff_coeff {:f}, prop_radius {:f},\n[INFO] drag_xy_coeff {:f}, drag_z_coeff {:f},\n[INFO] dw_coeff_1 {:f}, dw_coeff_2 {:f}, dw_coeff_3 {:f}".format(
+        #     self.M, self.L, self.J[0,0], self.J[1,1], self.J[2,2], self.KF, self.KM, self.THRUST2WEIGHT_RATIO, self.MAX_SPEED_KMH, self.GND_EFF_COEFF, self.PROP_RADIUS, self.DRAG_COEFF[0], self.DRAG_COEFF[2], self.DW_COEFF_1, self.DW_COEFF_2, self.DW_COEFF_3))
         #### Compute constants #####################################
         self.GRAVITY = self.G*self.M
         self.HOVER_RPM = np.sqrt(self.GRAVITY / (4*self.KF))
@@ -150,15 +150,21 @@ class BaseAviary(gym.Env):
             self.INV_A = np.linalg.inv(self.A)
             self.B_COEFF = np.array([1/self.KF, 1/(self.KF*self.L), 1/(self.KF*self.L), 1/self.KM])
         #### Connect to PyBullet ###################################
+        if initial_xyzs is None:
+            cameraTargetPosition = [0., 0., 0.]
+            cameraDistance = max(3, min(5, self.NUM_DRONES))
+        else:
+            cameraTargetPosition = initial_xyzs[np.argmin(initial_xyzs[:, 0]), :]
+            cameraDistance = max(3, min(5, self.NUM_DRONES))
         if self.GUI:
             #### With debug GUI ########################################
             self.CLIENT = p.connect(p.GUI) # p.connect(p.GUI, options="--opengl2")
             for i in [p.COV_ENABLE_RGB_BUFFER_PREVIEW, p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW]:
                 p.configureDebugVisualizer(i, 0, physicsClientId=self.CLIENT)
-            p.resetDebugVisualizerCamera(cameraDistance=3,
-                                         cameraYaw=-30,
+            p.resetDebugVisualizerCamera(cameraDistance=cameraDistance,
+                                         cameraYaw=45,
                                          cameraPitch=-30,
-                                         cameraTargetPosition=[0, 0, 0],
+                                         cameraTargetPosition=cameraTargetPosition,
                                          physicsClientId=self.CLIENT
                                          )
             ret = p.getDebugVisualizerCamera(physicsClientId=self.CLIENT)
@@ -182,11 +188,11 @@ class BaseAviary(gym.Env):
                 self.VID_HEIGHT=int(480)
                 self.FRAME_PER_SEC = 24
                 self.CAPTURE_FREQ = int(self.SIM_FREQ/self.FRAME_PER_SEC)
-                self.CAM_VIEW = p.computeViewMatrixFromYawPitchRoll(distance=3,
-                                                                    yaw=-30,
+                self.CAM_VIEW = p.computeViewMatrixFromYawPitchRoll(distance=cameraDistance,
+                                                                    yaw=45,
                                                                     pitch=-30,
                                                                     roll=0,
-                                                                    cameraTargetPosition=[0, 0, 0],
+                                                                    cameraTargetPosition=cameraTargetPosition,
                                                                     upAxisIndex=2,
                                                                     physicsClientId=self.CLIENT
                                                                     )
